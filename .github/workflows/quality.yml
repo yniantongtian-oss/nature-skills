@@ -1,0 +1,33 @@
+name: Skill package quality
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate shared shell scripts
+        run: |
+          find scripts -type f -name '*.sh' -print0 | xargs -0 -r -n 1 bash -n
+      - name: Validate Python syntax
+        run: python -m compileall -q skills/nature-academic-search skills/nature-citation
+      - name: Check skill manifests
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          paths = sorted(Path("skills").glob("nature-*/SKILL.md"))
+          if len(paths) < 5:
+              raise SystemExit("Expected domain skills are missing")
+          for path in paths:
+              if not path.read_text(encoding="utf-8").strip():
+                  raise SystemExit(f"Empty manifest: {path}")
+          print(f"Validated {len(paths)} skill manifests")
+          PY
